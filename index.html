@@ -71,7 +71,31 @@ let filter='semua';
 const now=new Date();const todayName={1:'Senin',2:'Selasa',3:'Rabu',4:'Kamis',5:'Jumat',6:'Sabtu',0:'Minggu'}[now.getDay()];
 document.getElementById('todayLabel').innerHTML=now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'})+'<br>Kelas B';
 function render(){document.getElementById('days').innerHTML=days.map(day=>{const list=schedule.filter(x=>x.day===day&&(filter==='semua'||x.type===filter));const base=new Date();const offset=(dayMap[day]-(base.getDay()||7)+7)%7;const date=new Date(base);date.setDate(base.getDate()+offset);const dateText=date.toLocaleDateString('id-ID',{day:'numeric',month:'short'});const cards=list.map(c=>'<article class="course '+(c.type==='praktikum'?'praktikum ':'')+(c.group==='GAB A'?'gab':'')+'"><div class="time">'+c.time+'</div><h4>'+c.name+'</h4><div class="meta"><span class="tag '+(c.type==='praktikum'?'lab':'')+'">'+(c.type==='praktikum'?'Praktikum':'Kuliah')+'</span>'+(c.group?'<span class="tag '+(c.group==='GAB A'?'gab':'')+'">'+c.group+'</span>':'')+'<span class="tag">⌖ '+c.room+'</span></div></article>').join('');return '<section class="day '+(day===todayName?'today':'')+'"><div class="day-head"><div><div class="day-name">'+day+'</div><div class="day-date">'+dateText+'</div></div>'+(day===todayName?'<span class="today-tag">HARI INI</span>':'')+'</div>'+(cards||'<div class="empty">'+(day==='Kamis'?'Tidak ada kuliah. Waktunya istirahat.':'Tidak ada jadwal sesuai filter.')+'</div>')+'</section>'}).join('')}
-document.querySelectorAll('.filter').forEach(btn=>btn.addEventListener('click',()=>{document.querySelectorAll('.filter').forEach(b=>b.classList.remove('active'));btn.classList.add('active');filter=btn.dataset.filter;render()}));render();
+
+/* Smooth filter transitions: fade/slide out, update, then fade/slide in */
+.days{transition:opacity .22s ease,transform .22s ease;will-change:opacity,transform}
+.days.is-changing{opacity:0;transform:translateY(8px) scale(.995);pointer-events:none}
+.filter:focus-visible{outline:3px solid #326df455;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.days{transition:none}}
+const filterButtons=document.querySelectorAll('.filter');
+let filterChanging=false;
+filterButtons.forEach(btn=>btn.addEventListener('click',()=>{
+  if(filterChanging||btn.dataset.filter===filter)return;
+  filterChanging=true;
+  filterButtons.forEach(b=>{b.classList.toggle('active',b===btn);b.setAttribute('aria-pressed',String(b===btn))});
+  const grid=document.getElementById('days');
+  grid.classList.add('is-changing');
+  window.setTimeout(()=>{
+    filter=btn.dataset.filter;
+    render();
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      grid.classList.remove('is-changing');
+      window.setTimeout(()=>{filterChanging=false},240);
+    }));
+  },180);
+}));
+filterButtons.forEach(b=>b.setAttribute('aria-pressed',String(b.classList.contains('active'))));
+render();
 </script>
 </body>
 </html>
